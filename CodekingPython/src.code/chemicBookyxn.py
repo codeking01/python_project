@@ -7,6 +7,7 @@ headers = {'user-agent': UserAgent().Chrome}
 if __name__ == '__main__':
     # page [0,367)
     for pagenum in range(0, 367):
+        #这个是爬取的页码
         # 起始地址
         # https://www.chemicalbook.com/ProductCASList_12_0_EN.htm
         url = 'https://www.chemicalbook.com/ProductCASList_15_{page}00_EN.htm'.format(page=pagenum)
