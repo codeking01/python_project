@@ -12,7 +12,6 @@ from scrapy import signals
 from itemadapter import is_item, ItemAdapter
 from scrapy.exceptions import NotConfigured
 
-from Python_project.ChemicBook_Download.ChemicBook_Download import settings
 
 
 class ChemicbookDownloadSpiderMiddleware:
