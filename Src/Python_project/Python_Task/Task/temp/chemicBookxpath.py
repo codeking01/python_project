@@ -7,7 +7,7 @@ if __name__ == '__main__':
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:98.0) Gecko/20100101 Firefox/98.0"
     }
-    # 这个是第一次创建的时候写的
+    # 这个是第一次创建的时候写的 这个可以自己手动创建
     # wb = Workbook()
     # ws = wb.active
     # ws.title = 'chemicbook数据'
