@@ -1,0 +1,19 @@
+ATOM      1  N   ARG A 145      13.691  28.615  39.445  1.00 34.04      zuih N  
+ATOM      2  CA  ARG A 145      14.478  29.826  39.207  1.00 35.21      zuih C  
+ATOM      3  C   ARG A 145      13.685  31.068  39.608  1.00 35.15      zuih C  
+ATOM      4  O   ARG A 145      14.187  31.899  40.417  1.00 36.68      zuih O  
+ATOM      5  CB  ARG A 145      14.976  30.022  37.750  1.00 38.18      zuih C  
+ATOM      6  CG  ARG A 145      15.721  31.325  37.510  1.00 38.11      zuih C  
+ATOM      7  CD  ARG A 145      16.750  31.302  36.439  1.00 37.91      zuih C  
+ATOM      8  NE  ARG A 145      17.770  32.304  36.737  1.00 37.85      zuih N  
+ATOM      9  CZ  ARG A 145      18.582  32.989  35.922  1.00 41.07      zuih C  
+ATOM     10  NH1 ARG A 145      18.513  32.787  34.591  1.00 39.43      zuih N1+
+ATOM     11  NH2 ARG A 145      19.467  33.905  36.425  1.00 39.28      zuih N  
+TER      12      ARG A 145 
+ATOM     13  N   SER B 386      20.870  42.012  35.743  1.00 26.13      zuih N  
+ATOM     14  CA  SER B 386      20.502  43.421  35.718  1.00 23.41      zuih C  
+ATOM     15  C   SER B 386      21.022  44.237  36.966  1.00 20.98      zuih C  
+ATOM     16  O   SER B 386      21.295  43.798  38.098  1.00 21.23      zuih O  
+ATOM     17  CB  SER B 386      18.974  43.538  35.671  1.00 17.86      zuih C  
+ATOM     18  OG  SER B 386      18.446  43.289  36.985  1.00 17.97      zuih O  
+END
