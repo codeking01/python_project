@@ -1,15 +1,7 @@
-import math
 import warnings
-from fractions import Fraction
-from math import e
 
 import numpy as np
 from numpy import sin
-from scipy import integrate
-from scipy.optimize import curve_fit
-from sympy import ln, dsolve, Eq
-from sympy import sin
-from sympy import *
 
 if __name__ == '__main__':
     # x, y, z = sympy.symbols('x y z')
