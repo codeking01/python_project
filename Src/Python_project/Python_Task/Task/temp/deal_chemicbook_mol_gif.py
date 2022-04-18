@@ -10,7 +10,6 @@
 import openpyxl
 from tqdm import tqdm
 
-from Python_project.ChemicBook_Download.ChemicBook_Download.spiders.chemicbook import cas_list, deal_cas_list
 
 # todo 把读文件和读取excle的方法封装成一个utils的类 以后直接复用
 def Predeal_Data():
