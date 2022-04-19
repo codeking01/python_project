@@ -9,6 +9,7 @@ import re
 import shutil
 import time
 import openpyxl
+from tqdm import tqdm
 
 
 def get_cid_dic(read_path):
@@ -40,21 +41,23 @@ if __name__ == '__main__':
     # 读取excel
     cid_dic = get_cid_dic(read_path)
     # 图片所在文件夹，注意格式的书写
-    filePath = 'D:\\test'
+    filePath = 'D:\\test1'
     name_list = os.listdir(filePath)
-    cas_pattern = re.compile(r"\d+_\d+_\d")
-    for i in range(0, len(name_list)):
+    cas_pattern = re.compile(r"\d{2,7}_\d{2}_\d{1}")
+    for i in tqdm(range(0, len(name_list))):
         # 原名
         src = filePath + '\\' + name_list[i]
+        # todo 有可能cid对应的cas是空的
         try:
             try:
-                # todo 程序存在问题原本的cid应该改为字典存储
                 # 找到cid
                 cid_key = name_list[i].split('_')[1].split('.')[0]
                 # 当cid不存在时,跳出循环
                 if(cid_key not in cid_dic):
                     casname=''
-                    print('cidkey有问题,cid为:{cid}'.format(cid=cid_key))
+                    print('cid_key有问题,excel中不存在这个数，原因应该是图片存在cid,cid为:{cid}'.format(cid=cid_key))
+                    # todo 删除图片
+                    os.remove(src)
                     continue
                 else:
                     casname = cid_dic[cid_key]
@@ -89,7 +92,7 @@ if __name__ == '__main__':
                 os.rename(src, dst)
             print('第{i}条数据转化成功。'.format(i=i))
         except Exception as e:
-            print('未知错误，可能是多个cid对应同一个图片,reasons: {e}'.format(e=e))
+            print('未知错误，reasons: {e}'.format(e=e))
     t2 = time.time()
     t=round(t2 - t1, 2)
     print('程序运行结束，感谢您的使用，本次消耗时间为：{t}'.format(t=t))
