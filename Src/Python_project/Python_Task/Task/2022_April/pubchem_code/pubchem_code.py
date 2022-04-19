@@ -13,6 +13,9 @@ import os
 
 
 # 自定义路径的文件创建
+from tqdm import tqdm
+
+
 def creat_save_path(filename, load_path, default_flag):
     try:
         if (default_flag == True):
@@ -35,7 +38,7 @@ def get_cas_list(excel_path, turn_flag):
         read_path = excel_path
         wb = openpyxl.load_workbook(read_path)
     except Exception as e:
-        print("路径可能有问题，请检查,错误原因：", e)
+        print('路径可能有问题，请检查,错误原因：', e)
     else:
         # 取第一张表名
         sheetnames = wb.sheetnames
@@ -49,45 +52,57 @@ def get_cas_list(excel_path, turn_flag):
         cid_list = []
 
         # 定义正则规则
-        cas_pattern = re.compile(r"\d+-\d+-\d")
+        cas_pattern = re.compile(r"\|(\d{2,7}-\d{2}-\d{1})\||\|CAS-(\d{2,7}-\d{2}-\d{1})\|")
         # 存储cas到excel里面 cas数据在第4列
         for index in range(2, rows + 1):
             pre_cas = ws.cell(row=index, column=4).value
             # 将cid号全部取出来 存在一个列表里 cid数据在第2列
             cid_list.append(ws.cell(row=index, column=2).value)
 
-            # 部分的数据没有
+            # 部分的数据在excel里面没有
             if (pre_cas == None):
-                cas = ''
-            else:
-                cas = cas_pattern.findall(pre_cas)
-            # 考虑没有cas号的情况 存一个 '' 占位，确保顺序一致性，后面加判断
-            if (len(cas) == 0):
                 cas_list.append('')
                 ws.cell(index, max_column + 1, '')
             else:
-                # 在有cas的情况下，分别考虑多个cas和单个cas的情况
-                # 将'-'转换为'_'
-                cas = [i.replace('-', '_') for i in cas]
-                # 如果取到多个cas号 则以列表的形式存储  把列表的所有数据存储进去
-                if (len(cas) > 1):
-                    temp_list = []
-                    for storage_cas in cas:
-                        # 判断0开头的cas号，不是0才存进去
-                        if (storage_cas[0] != '0'):
-                            temp_list.append(storage_cas)
-                    cas_list.append(temp_list)
-                    ws.cell(index, max_column + 1, '{data}'.format(data=temp_list))
+                cas = cas_pattern.findall(pre_cas)
+                # 考虑没有cas号的情况 存一个 '' 占位，确保顺序一致性，后面加判断
+                if (len(cas) == 0):
+                    cas_list.append('')
+                    ws.cell(index, max_column + 1, '')
                 else:
-                    # 判断0开头的cas号，不是0才存进去
-                    if (cas[0] != '0'):
-                        cas_list.append(cas[0])
-                    # cas_list.append(cas[0])
-                    ws.cell(index, max_column + 1, '{data}'.format(data=cas[0]))
+                    # 处理匹配到的数据  这个是这个类型  cas=[('71-55-6', ''), ('', '71-55-6')]
+                    cas_temp_list = []
+                    for cas_value_index in range(len(cas)):
+                        cas_temp = cas[cas_value_index]
+                        for c_value in cas_temp:
+                            if (c_value != ''):
+                                cas_temp_list.append(c_value)
+                    # 删除重复的cas数据
+                    cas = list(set(cas_temp_list))
+                    # 在有cas的情况下，分别考虑多个cas和单个cas的情况
+                    # 将'-'转换为'_'
+                    cas = [i.replace('-', '_') for i in cas]
+                    # 如果取到多个cas号 则以列表的形式存储  把列表的所有数据存储进去
+                    if (len(cas) > 1):
+                        temp_list = []
+                        for storage_cas in cas:
+                            # # 判断0开头的cas号，不是0才存进去
+                            # if (storage_cas[0] != '0'):
+                            temp_list.append(storage_cas)
+                        cas_list.append(temp_list)
+                        ws.cell(index, max_column + 1, '{data}'.format(data=temp_list))
+                    else:
+                        # cas列表可能为空
+                        if (len(cas) == 0):
+                            cas_list.append('')
+                            ws.cell(index, max_column + 1, '')
+                        else:
+                            cas_list.append(cas[0])
+                            ws.cell(index, max_column + 1, '{data}'.format(data=cas[0]))
         if (turn_flag == True):
             wb.save(excel_path)
         print("excel的cas全部存储完毕！")
-        return cas_list,cid_list
+        return cas_list, cid_list
 
 
 def Read_SDF(read_path):
@@ -104,19 +119,52 @@ def Read_SDF(read_path):
 # 把数据写入为mol，并且以cas号命名
 def save_mol(savefilepath, data, temp_list):
     try:
+        # todo 判断一下存储的cas是否原来也存储过
         # 处理cas是列表的数据
         if (type(data) == list):
             for L_index in data:
-                file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=L_index), 'w', encoding='utf-8')
+                # 判断一下存储的cas是否原来也存储过
+                if(L_index in saved_caslist):
+                    same_index=0
+                    # 判断出现过几次了
+                    for L in  saved_caslist:
+                        if(L_index == L):
+                            same_index+=1
+                    # 修改原来的名字为 100_10_1-1
+                    cas_name=L_index+'-'+str(same_index)
+                    file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=cas_name), 'w', encoding='utf-8')
+                    for i in temp_list:
+                        file.write(i)
+                    file.close()
+                    saved_caslist.append(data)
+                else:
+                    file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=L_index), 'w', encoding='utf-8')
+                    for i in temp_list:
+                        file.write(i)
+                    file.close()
+                    saved_caslist.append(L_index)
+        # 单个数据
+        else:
+            # 判断一下存储的cas是否原来也存储过
+            if(data in saved_caslist):
+                same_index=0
+                # 判断出现过几次了
+                for L in  saved_caslist:
+                    if(data == L):
+                        same_index+=1
+                # 修改原来的名字为 100_10_1-1
+                cas_name=data+'-'+str(same_index)
+                file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=cas_name), 'w', encoding='utf-8')
                 for i in temp_list:
                     file.write(i)
                 file.close()
-        #  存在名字不合法的cas
-        else:
-            file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=data), 'w', encoding='utf-8')
-            for i in temp_list:
-                file.write(i)
-            file.close()
+                saved_caslist.append(data)
+            else:
+                file = open('{savefile}/{cas}.mol'.format(savefile=savefilepath, cas=data), 'w', encoding='utf-8')
+                for i in temp_list:
+                    file.write(i)
+                file.close()
+                saved_caslist.append(data)
     except Exception as e:
         # 考虑将失败的数据存入日志文件中
         with open('./log/{cas}.log'.format(cas='fail_sdf'), encoding='utf-8', mode='a') as file:
@@ -129,7 +177,7 @@ def save_mol(savefilepath, data, temp_list):
 # 判断cas是否为空
 def IsNotEmpty(func):
     def wrapper(*args):
-        if(str(sdf_cid) in cid_dic):
+        if (str(sdf_cid) in cid_dic):
             # cas不为空的时候进行存储
             if (cid_dic[str(sdf_cid)] != ''):
                 func(*args)
@@ -146,11 +194,13 @@ def IsNotEmpty(func):
             print('cid号不在当前字典中!')
     return wrapper
 
+
 # 将sdf内容转化为mol存储，需要判断cas是否存在，如不存在则跳过
 @IsNotEmpty
-def convert_mol(savepath, temp_list, current_index,sdf_cid):
+def convert_mol(savepath, temp_list, current_index, sdf_cid):
     data = cid_dic[str(sdf_cid)]
     save_mol(savefilepath=savepath, data=data, temp_list=temp_list)
+
 
 #  由于csv文件操作存在一些问题，这里我转化为xlsx进行操作
 def ConvertToExcel(path_name):
@@ -161,11 +211,12 @@ def ConvertToExcel(path_name):
     excel_path = '{path_name}.xlsx'.format(path_name=str(path_name))
     data.to_excel(excel_path)
 
+
 # 获取cid对应的cas，将其存储为字典
-def get_cid_dic(cid_list,cas_list):
+def get_cid_dic(cid_list, cas_list):
     # 将cid数据 和 cas号对应起来
     cid_dic = {}
-    if(len(cid_list)==len(cas_list)):
+    if (len(cid_list) == len(cas_list)):
         for index in range(0, len(cas_list)):
             key = cid_list[index]
             value = cas_list[index]
@@ -173,6 +224,7 @@ def get_cid_dic(cid_list,cas_list):
         return cid_dic
     else:
         print('数据获取有误')
+
 
 if __name__ == '__main__':
     # todo 将需要修改的东西放到配置文件
@@ -215,29 +267,30 @@ if __name__ == '__main__':
     # turn_flag=True 默认开启，代表把cas存储到excel中，如果是第二次运行，则设置 turn_flag=False
     temp_data = get_cas_list(excel_path=r'{excel_path_f}'.format(excel_path_f=excel_path_f), turn_flag=True)
     cas_list = temp_data[0]
-    cid_list=temp_data[1]
+    cid_list = temp_data[1]
     #  将数据存储到cid_dic字典里面
-    cid_dic=get_cid_dic(cid_list,cas_list)
+    cid_dic = get_cid_dic(cid_list, cas_list)
+    # 用来标记存储过的cas
+    saved_caslist=[]
 
     # 读取sdf的数据全部存储为列表了 写入sdf的路径
     sdf_file = Read_SDF(read_path=str(sdf_path))
     current_index = 0
 
-    # 为了优化整体效率，第一个索引的 sdf文件，不会删除'  -OEChem-04152207392D'
     temp_list = []
     # flag用来标记是否处在多余部分
     flag = False
-    for index in range(0, len(sdf_file)):
+    for index in tqdm(range(0, len(sdf_file))):
         if (flag == False and sdf_file[index] != 'M  END\n'):
             temp_list.append(sdf_file[index])
         elif (sdf_file[index] == 'M  END\n'):
             # 一个sdf的内容全部拿到，临时存储至temp_list
             temp_list.append(sdf_file[index])
-            #判断sdf的cid 和存储的cid是否对的上 去除换行的
-            sdf_cid=temp_list[0].strip()
+            # 判断sdf的cid 和存储的cid是否对的上 去除换行的
+            sdf_cid = temp_list[0].strip()
 
             # 根据cas号开始命名存储文件
-            convert_mol(savepath, temp_list, current_index,sdf_cid)
+            convert_mol(savepath, temp_list, current_index, sdf_cid)
             # convert_mol(savepath=str(savepath),temp_list=temp_list, current_index=current_index)
             current_index += 1
             # 清空临时列表
