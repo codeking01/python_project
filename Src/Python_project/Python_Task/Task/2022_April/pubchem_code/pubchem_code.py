@@ -275,6 +275,7 @@ if __name__ == '__main__':
 
     # 读取sdf的数据全部存储为列表了 写入sdf的路径
     sdf_file = Read_SDF(read_path=str(sdf_path))
+
     current_index = 0
 
     temp_list = []
