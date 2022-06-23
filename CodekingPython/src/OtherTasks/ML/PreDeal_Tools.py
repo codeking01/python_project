@@ -205,7 +205,7 @@ def get_former_Ydata(excel_data):
     # 没有Original_TableFourYdata
     Merge_TableFiveYdata = excel_data[3:, 107:131]
     Merge_TableSixYdata = excel_data[3:, 144:172]
-    Merge_TableSevenYdata = excel_data[1:, 178:249]
+    Merge_TableSevenYdata = excel_data[3:, 178:249]
     return Merge_TableTwoYdata, Merge_TableThreeYdata, Merge_TableFiveYdata, Merge_TableSixYdata, Merge_TableSevenYdata
 
 # 根据Y_data_boundsMin和Y_data_boundsMax处理Y_data
