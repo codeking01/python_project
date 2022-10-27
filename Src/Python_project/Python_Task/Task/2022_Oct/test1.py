@@ -11,32 +11,39 @@ def r2(x, y):
     return r2
 
 
+# CEX0是x([X:,0]),CEX是z(X[:,1]),k3是a,k-3是b,k2`是k2。E0
+# y=((k2`*b*x)*E0)/(k2`+a*z+(b-a)*x)
+
+k2 = 1197
+E0 = 0.0496
+
+
 def f_fit(X, a, b):
-    return ((100 * b * X[:, 1]) * 0.05) / (100 + a * X[:, 0] + (b - a) * X[:, 1])
+    return ((k2 * b * X[:, 1]) * E0) / (k2 + a * X[:, 0] + (b - a) * X[:, 1])
 
 
-x = np.array([20.49462888,
-              60.22977019,
+x = np.array([22.05724587,
+              45.48035652,
               83.04285454,
               108.9096476,
               139.6265276,
               ])
-z = np.array([19.55595904,
-              55.03897975,
+z = np.array([19.77366014,
+              40.66102201,
               76.68262453,
               100.6623237,
               130.877381,
               ])
 X = np.c_[x, z]
-y = np.array([0.938669842,
-              5.190790447,
+y = np.array([2.283585737,
+              4.819334507,
               6.360230012,
               8.247323918,
               8.749146564,
               ])
 # p_fit是拟合系数 p_fit[0]是a p_fit[1]是b，如果参数多了依次类推,p0是他们的数量级差别
-p_fit, pcov = curve_fit(f_fit, X, y, p0=(1, 100), maxfev=10000)
-print('Correlation coefficients:')
+p_fit = curve_fit(f_fit, X, y, p0=(1, 100), maxfev=10000)[0]
+print('\nCorrelation coefficients:')
 print('p_fit', p_fit)
 # print('pcov', pcov)
 y_hat = f_fit(X, p_fit[0], p_fit[1])
@@ -67,7 +74,6 @@ from mpl_toolkits.mplot3d import axes3d
 # 给y升级一个维度
 y = y[np.newaxis, :]
 y_hat = y_hat[np.newaxis, :]
-
 flg = plt.figure('Wireframe', facecolor='lightgray')
 # flg1 = plt.figure('Wireframe', facecolor='lightgray')
 # ax3d1 = flg1.add_subplot(projection='3d')
@@ -76,12 +82,12 @@ ax3d = flg.add_subplot(projection='3d')
 ax3d.set_xlabel('CEX0', fontsize=14)
 ax3d.set_ylabel('CEX', fontsize=14)
 ax3d.set_zlabel('Y', fontsize=14)
-# ax3d.plot_wireframe(X[:, 0], X[:, 1], y, rstride=10,
-#                     cstride=10, color='dodgerblue')
-# ax3d.plot_wireframe(X[:, 0], X[:, 1], y_hat, rstride=10,
-#                     cstride=10, color='red',label='dodgerblue')
-ax3d.scatter(X[:, 0], X[:, 1], y_hat, color='dodgerblue',label='dodgerblue')
-ax3d.scatter(X[:, 0], X[:, 1], y, color='red',label='dodgerblue')
-# ax3d.scatter(x,y,8,zdir='Y',c='black')
+ax3d.plot_wireframe(X[:, 0], X[:, 1], y, rstride=10,
+                    cstride=10, color='dodgerblue')
+ax3d.plot_wireframe(X[:, 0], X[:, 1], y_hat, rstride=10,
+                    cstride=10, color='red', label='dodgerblue' )
+ax3d.scatter(X[:, 0], X[:, 1], y, color='dodgerblue', label='dodgerblue')
+ax3d.scatter(X[:, 0], X[:, 1], y_hat, color='red', label='dodgerblue')
+# ax3d.plot(x, z, y, c='black')
 plt.show()
 # plt.savefig('pic.jpg')
