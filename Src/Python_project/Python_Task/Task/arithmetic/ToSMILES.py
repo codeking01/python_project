@@ -308,24 +308,36 @@ def DFS(graph, start):
     return result, no_circle_graph, unique_link_graph
 
 
-def get_max_road(atom_length=None, no_circle_graph=None, start=None):
+def get_degree_zero(no_circle_graph=None):
+    """
+    :param no_circle_graph: 无环图的连接关系
+    :return: 度为1的列表
+    """
+    zero_list = []
+    for i in no_circle_graph:
+        if len(no_circle_graph[i]) == 1:
+            zero_list.append(i)
+    return zero_list
+
+
+def get_max_road(atom_list=None, no_circle_graph=None, start=None):
     max_road = []
-    for i in range(1, atom_length + 1):
+    # for i in range(1, atom_list + 1):
+    for i in atom_list:
         result, no_circle_graph, unique_link_graph = DFS(graph=no_circle_graph, start=str(start))
         # print('深度优先序列：', result)
-        # print('*******************************************************')
         final_result = find_main(graph=no_circle_graph, result=result, end_flag=f'{i}')
         # print('主侧链连接关系：', final_result)
-        mainList = find_mainList(aim_list=final_result)
+        main_list = find_mainList(aim_list=final_result)
         # print('主链路：', mainList)
-        sideList = find_sideList(aim_list=final_result)
-        if len(mainList) > len(max_road):
-            max_road = copy.deepcopy(mainList)
+        side_list = find_sideList(aim_list=final_result)
+        if len(main_list) > len(max_road):
+            max_road = copy.deepcopy(main_list)
             max_final_result = copy.deepcopy(final_result)
-            max_mainList = copy.deepcopy(mainList)
-            max_sideList = copy.deepcopy(sideList)
+            max_main_list = copy.deepcopy(main_list)
+            max_side_list = copy.deepcopy(side_list)
         # print('侧边链路：', sideList)
-    return max_road, max_final_result, max_mainList, max_sideList
+    return max_road, max_final_result, max_main_list, max_side_list
 
 
 def get_break_graph(graph=None, new_graph=None):
@@ -335,8 +347,6 @@ def get_break_graph(graph=None, new_graph=None):
     :return: 记录去掉连接关系的图
     """
     break_graph = {}
-    # for i in range(1, len(graph) + 1):
-    #     break_graph[str(i)] = []
     for item_index in range(1, len(graph) + 1):
         break_graph[str(item_index)] = list(set(graph[str(item_index)]) - set(new_graph[str(item_index)]))
     return break_graph
@@ -345,21 +355,23 @@ def get_break_graph(graph=None, new_graph=None):
 def get_all_max_road(graph=None):
     max_road = []
     for i in range(1, len(graph) + 1):
-    # for i in range(3, 4):
+        # for i in range(3, 4):
         result, no_circle_graph, unique_link_graph = DFS(graph=graph, start=str(i))
-        atom_length = len(graph)
-        all_max_road, final_result, mainList, sideList = get_max_road(atom_length=atom_length,no_circle_graph=no_circle_graph, start=str(i))
+        # 只需要找到度为0的就行
+        zero_list = get_degree_zero(no_circle_graph=no_circle_graph)
+        all_max_road, final_result, main_list, side_list = get_max_road(atom_list=zero_list,
+                                                                        no_circle_graph=no_circle_graph, start=str(i))
         if len(all_max_road) > len(max_road):
             max_road = copy.deepcopy(all_max_road)
             max_final_result = copy.deepcopy(final_result)
-            max_mainList = copy.deepcopy(mainList)
-            max_sideList = copy.deepcopy(sideList)
+            max_main_list = copy.deepcopy(main_list)
+            max_side_list = copy.deepcopy(side_list)
             max_unique_link_graph = copy.deepcopy(unique_link_graph)
             max_result, max_no_circle_graph = copy.deepcopy(result), copy.deepcopy(no_circle_graph)
             # print('深度优先序列：', result)
             # print('\nNo_Circle_graph：', no_circle_graph)
             # print('*******************************************************')
-    return max_road, max_final_result, max_mainList, max_sideList, max_result, max_no_circle_graph, max_unique_link_graph
+    return max_road, max_final_result, max_main_list, max_side_list, max_result, max_no_circle_graph, max_unique_link_graph
 
 
 def insert_aim_list(aim_list=None, aim_atom=None, insert_atom=None):
@@ -391,7 +403,7 @@ def insert_final_side(final_side=None, aim_atom=None, insert_atom=None):
     :return: 返回插入好的侧链集合
     """
     # 插入的时候 需要倒着插
-    for out_index in range(len(final_side)-1, -1, -1):
+    for out_index in range(len(final_side) - 1, -1, -1):
         if aim_atom in final_side[out_index]:
             # 单原子和多原子做法不一样
             if len(insert_atom) == 1:
@@ -424,7 +436,7 @@ def gjf_to_smiles(unique_link_graph=None, main_list=None, final_side=None):
 
 
 if __name__ == "__main__":
-    start = time.perf_counter()
+    start = time.time()
     gjf_path = './test/111.gjf'
     MSI_gjf = msi_gjf(gjfpath=gjf_path)
     M_adj = MSI_gjf['M_adj']
@@ -468,5 +480,5 @@ if __name__ == "__main__":
     smiles_lst, smiles_atom_lst = add_bre(bre_dic=break_graph, smiles_lst=smiles_lst, smiles_atom_lst=smiles_atom_lst)
     print(''.join(smiles_atom_lst))
 
-    end = time.perf_counter()
-    print(f'这个程序调用cpu消耗的时间为：{(end - start)}')
+    end = time.time()
+    print(f'消耗的时间为：{(end - start)}')
