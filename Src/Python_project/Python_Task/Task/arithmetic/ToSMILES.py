@@ -2,136 +2,142 @@ import copy
 import time
 from datetime import datetime
 
-graph = {1: [2, 6, 7],
-         2: [1, 3, 88],
-         3: [2, 4, 8],
-         4: [3, 5, 10],
-         5: [4, 6, 17],
-         6: [1, 5, 9],
-         7: [1],
-         8: [3],
-         9: [6],
-         10: [4, 11, 12, 21],
-         11: [10],
-         12: [10, 13, 17],
-         13: [12, 14, 18],
-         14: [13, 15, 84],
-         15: [14, 16, 19],
-         16: [15, 17, 20],
-         17: [5, 12, 16],
-         18: [13],
-         19: [15],
-         20: [16],
-         21: [10, 22, 23],
-         22: [21, 24, 25],
-         23: [21, 26, 27],
-         24: [22, 28, 29],
-         25: [22, 30, 31],
-         26: [23, 29, 32],
-         27: [23],
-         28: [24, 33, 34],
-         29: [24, 26, 35],
-         30: [25, 33, 52],
-         31: [25],
-         32: [26, 36, 37],
-         33: [28, 30, 38],
-         34: [28, 39, 40],
-         35: [29, 39, 41],
-         36: [32, 41, 42],
-         37: [32],
-         38: [33, 43, 119],
-         39: [34, 35, 44],
-         40: [34, 43, 45],
-         41: [35, 36, 46],
-         42: [36],
-         43: [38, 40, 127],
-         44: [39, 47, 48],
-         45: [40, 47, 128],
-         46: [41, 48, 49],
-         47: [44, 45, 50],
-         48: [44, 46, 51],
-         49: [46],
-         50: [47],
-         51: [48],
-         52: [30, 53, 54, 68],
-         53: [52, 55, 56, 57],
-         54: [52, 58, 59, 60],
-         55: [53, 61, 62, 63],
-         56: [53],
-         57: [53],
-         58: [54, 61, 64, 65],
-         59: [54],
-         60: [54],
-         61: [55, 58, 66, 67],
-         62: [55],
-         63: [55],
-         64: [58],
-         65: [58],
-         66: [61],
-         67: [61],
-         68: [52, 69, 70, 71],
-         69: [68, 72, 73, 74],
-         70: [68, 75, 76, 77],
-         71: [68],
-         72: [69, 78, 79, 93],
-         73: [69],
-         74: [69],
-         75: [70, 78, 80, 81],
-         76: [70],
-         77: [70],
-         78: [72, 75, 82, 83],
-         79: [72],
-         80: [75],
-         81: [75],
-         82: [78],
-         83: [78, 111],
-         84: [14, 85, 86, 87],
-         85: [84],
-         86: [84],
-         87: [84],
-         88: [2, 89, 90, 91],
-         89: [88],
-         90: [88],
-         91: [88, 92, 93, 94],
-         92: [91, 95, 96, 97],
-         93: [72, 91, 98, 99],
-         94: [91],
-         95: [92, 100, 101, 102],
-         96: [92],
-         97: [92, 103, 104, 105],
-         98: [93, 102, 103, 106],
-         99: [93],
-         100: [95],
-         101: [95],
-         102: [95, 98, 107, 108],
-         103: [97, 98, 109, 110],
-         104: [97],
-         105: [97],
-         106: [98],
-         107: [102],
-         108: [102],
-         109: [103],
-         110: [103],
-         111: [83, 112],
-         112: [111, 113, 114, 115],
-         113: [112, 116, 117, 118],
-         114: [112],
-         115: [112],
-         116: [113],
-         117: [113],
-         118: [113],
-         119: [38, 120, 121],
-         120: [119],
-         121: [119, 122, 123, 124],
-         122: [121],
-         123: [121],
-         124: [121, 125, 126, 127],
-         125: [124],
-         126: [124],
-         127: [43, 124, 129, 130],
-         128: [45],
-         129: [127],
-         130: [127]}
+import numpy as np
+
+from Task.arithmetic.utils.smiles_tools import msi_gjf, cyc_6, find_ben_modify_bon, add_element, add_bond, add_bre, \
+    get_graph
+
+
+# graph = {1: [2, 6, 7],
+#          2: [1, 3, 88],
+#          3: [2, 4, 8],
+#          4: [3, 5, 10],
+#          5: [4, 6, 17],
+#          6: [1, 5, 9],
+#          7: [1],
+#          8: [3],
+#          9: [6],
+#          10: [4, 11, 12, 21],
+#          11: [10],
+#          12: [10, 13, 17],
+#          13: [12, 14, 18],
+#          14: [13, 15, 84],
+#          15: [14, 16, 19],
+#          16: [15, 17, 20],
+#          17: [5, 12, 16],
+#          18: [13],
+#          19: [15],
+#          20: [16],
+#          21: [10, 22, 23],
+#          22: [21, 24, 25],
+#          23: [21, 26, 27],
+#          24: [22, 28, 29],
+#          25: [22, 30, 31],
+#          26: [23, 29, 32],
+#          27: [23],
+#          28: [24, 33, 34],
+#          29: [24, 26, 35],
+#          30: [25, 33, 52],
+#          31: [25],
+#          32: [26, 36, 37],
+#          33: [28, 30, 38],
+#          34: [28, 39, 40],
+#          35: [29, 39, 41],
+#          36: [32, 41, 42],
+#          37: [32],
+#          38: [33, 43, 119],
+#          39: [34, 35, 44],
+#          40: [34, 43, 45],
+#          41: [35, 36, 46],
+#          42: [36],
+#          43: [38, 40, 127],
+#          44: [39, 47, 48],
+#          45: [40, 47, 128],
+#          46: [41, 48, 49],
+#          47: [44, 45, 50],
+#          48: [44, 46, 51],
+#          49: [46],
+#          50: [47],
+#          51: [48],
+#          52: [30, 53, 54, 68],
+#          53: [52, 55, 56, 57],
+#          54: [52, 58, 59, 60],
+#          55: [53, 61, 62, 63],
+#          56: [53],
+#          57: [53],
+#          58: [54, 61, 64, 65],
+#          59: [54],
+#          60: [54],
+#          61: [55, 58, 66, 67],
+#          62: [55],
+#          63: [55],
+#          64: [58],
+#          65: [58],
+#          66: [61],
+#          67: [61],
+#          68: [52, 69, 70, 71],
+#          69: [68, 72, 73, 74],
+#          70: [68, 75, 76, 77],
+#          71: [68],
+#          72: [69, 78, 79, 93],
+#          73: [69],
+#          74: [69],
+#          75: [70, 78, 80, 81],
+#          76: [70],
+#          77: [70],
+#          78: [72, 75, 82, 83],
+#          79: [72],
+#          80: [75],
+#          81: [75],
+#          82: [78],
+#          83: [78, 111],
+#          84: [14, 85, 86, 87],
+#          85: [84],
+#          86: [84],
+#          87: [84],
+#          88: [2, 89, 90, 91],
+#          89: [88],
+#          90: [88],
+#          91: [88, 92, 93, 94],
+#          92: [91, 95, 96, 97],
+#          93: [72, 91, 98, 99],
+#          94: [91],
+#          95: [92, 100, 101, 102],
+#          96: [92],
+#          97: [92, 103, 104, 105],
+#          98: [93, 102, 103, 106],
+#          99: [93],
+#          100: [95],
+#          101: [95],
+#          102: [95, 98, 107, 108],
+#          103: [97, 98, 109, 110],
+#          104: [97],
+#          105: [97],
+#          106: [98],
+#          107: [102],
+#          108: [102],
+#          109: [103],
+#          110: [103],
+#          111: [83, 112],
+#          112: [111, 113, 114, 115],
+#          113: [112, 116, 117, 118],
+#          114: [112],
+#          115: [112],
+#          116: [113],
+#          117: [113],
+#          118: [113],
+#          119: [38, 120, 121],
+#          120: [119],
+#          121: [119, 122, 123, 124],
+#          122: [121],
+#          123: [121],
+#          124: [121, 125, 126, 127],
+#          125: [124],
+#          126: [124],
+#          127: [43, 124, 129, 130],
+#          128: [45],
+#          129: [127],
+#          130: [127]}
 
 
 # 将字典的键值全部改成字符串
@@ -211,7 +217,6 @@ def find_sideList(aim_list):
 
 
 def find_main(graph, result, end_flag):
-    # todo len(result) - 2 的问题 1 3 2 成环的问题
     for i in range(0, len(result) - 1):
         if result[i] != end_flag:
             if result[i] in graph[result[i + 1]]:
@@ -237,6 +242,38 @@ def gen_null_dict(graph_length=None, no_circle_graph=None, unique_link_graph=Non
     for i in range(1, graph_length + 1):
         unique_link_graph[str(i)] = []
     return no_circle_graph, unique_link_graph
+
+
+def get_ascend_bradk_graph(bradk_graph=None, smiles_list=None):
+    atom_smiles_list = []
+    # 只留下原子的smiles
+    for item in smiles_list:
+        if item != '(' and item != ')':
+            atom_smiles_list.append(item)
+    smiles_index = {}
+    for i in range(1, len(bradk_graph) + 1):
+        smiles_index[str(i)] = ''
+    # 获取smiles里面所有元素的索引
+    for item in atom_smiles_list:
+        smiles_index[str(item)] = atom_smiles_list.index(item)
+
+
+def gen_break_link(bradk_graph=None, smiles=None):
+    break_link_graph = {}
+    for i in range(1, len(bradk_graph) + 1):
+        break_link_graph[str(i)] = []
+    for item in smiles:
+        if item != ',' and item != '(' and item != ')':
+            if len(bradk_graph[str(item)]) != 0:
+                # 开始加数字,需要判断里面已经有没有数字
+                if len(break_link_graph[str(item)]) != 0:
+                    insert_number = int(break_link_graph[str(item)][-1]) + 1
+                    # 需要判断数字是否大于10，大于10加 %
+                    if insert_number >= 10:
+                        insert_number = f'%{insert_number}'
+                    break_link_graph[str(item)].append(str(insert_number))
+                else:
+                    break_link_graph[str(item)].append('1')
 
 
 def DFS(graph, start):
@@ -291,27 +328,27 @@ def get_max_road(atom_length=None, no_circle_graph=None, start=None):
     return max_road, max_final_result, max_mainList, max_sideList
 
 
-def get_bradk_graph(graph=None, new_graph=None):
+def get_break_graph(graph=None, new_graph=None):
     """
     :param graph: 原来的图
     :param new_graph: 去掉连接关系后的图
     :return: 记录去掉连接关系的图
     """
-    bradk_graph = {}
-    for i in range(1, len(graph) + 1):
-        bradk_graph[str(i)] = []
-    for item_index in range(1,len(graph)+1):
-        bradk_graph[str(item_index)] = list(set(graph[str(item_index)]) - set(new_graph[str(item_index)]))
-    return bradk_graph
+    break_graph = {}
+    # for i in range(1, len(graph) + 1):
+    #     break_graph[str(i)] = []
+    for item_index in range(1, len(graph) + 1):
+        break_graph[str(item_index)] = list(set(graph[str(item_index)]) - set(new_graph[str(item_index)]))
+    return break_graph
 
 
 def get_all_max_road(graph=None):
     max_road = []
     for i in range(1, len(graph) + 1):
+    # for i in range(3, 4):
         result, no_circle_graph, unique_link_graph = DFS(graph=graph, start=str(i))
         atom_length = len(graph)
-        all_max_road, final_result, mainList, sideList = get_max_road(atom_length=atom_length,
-                                                                      no_circle_graph=no_circle_graph, start=str(i))
+        all_max_road, final_result, mainList, sideList = get_max_road(atom_length=atom_length,no_circle_graph=no_circle_graph, start=str(i))
         if len(all_max_road) > len(max_road):
             max_road = copy.deepcopy(all_max_road)
             max_final_result = copy.deepcopy(final_result)
@@ -353,7 +390,8 @@ def insert_final_side(final_side=None, aim_atom=None, insert_atom=None):
     :param insert_atom: 要插入的原子
     :return: 返回插入好的侧链集合
     """
-    for out_index in range(0, len(final_side)):
+    # 插入的时候 需要倒着插
+    for out_index in range(len(final_side)-1, -1, -1):
         if aim_atom in final_side[out_index]:
             # 单原子和多原子做法不一样
             if len(insert_atom) == 1:
@@ -364,9 +402,8 @@ def insert_final_side(final_side=None, aim_atom=None, insert_atom=None):
                 insert_index = final_side[out_index].index(aim_atom) + 1
                 final_side[out_index].insert(insert_index, f'(')
                 for insert_atom_index in range(1, len(insert_atom) + 1):
-                    insert_index += insert_atom_index
-                    final_side[out_index].insert(insert_index,
-                                                 f'{insert_atom[insert_atom_index - 1]}')
+                    insert_index += 1
+                    final_side[out_index].insert(insert_index, f'{insert_atom[insert_atom_index - 1]}')
                 final_side[out_index].insert(insert_index + 1, f')')
             return final_side
 
@@ -388,7 +425,15 @@ def gjf_to_smiles(unique_link_graph=None, main_list=None, final_side=None):
 
 if __name__ == "__main__":
     start = time.perf_counter()
-    start_time = datetime.now()
+    gjf_path = './test/111.gjf'
+    MSI_gjf = msi_gjf(gjfpath=gjf_path)
+    M_adj = MSI_gjf['M_adj']
+    M_S_A = np.array(MSI_gjf['M_S_A'])
+    M_S = np.array(MSI_gjf['M_S'])
+    M_bon_ = np.array(MSI_gjf['M_bon_'])
+    M_atom = MSI_gjf['M_atom']
+    n_atom = MSI_gjf['n_atom']
+    graph, M_atom_H = get_graph(M_adj=M_adj, M_atom=M_atom)
     sec_graph = copy.deepcopy(graph)
     graph = exchange_graph(graph=graph)
     sec_graph = exchange_graph(graph=sec_graph)
@@ -404,9 +449,24 @@ if __name__ == "__main__":
     print('SMILES:smiles_list：', smiles_list)
     smiles = ','.join(smiles_list)
     print('SMILES:smiles结果：', smiles)
-    bradk_graph = get_bradk_graph(graph=graph, new_graph=no_circle_graph)
-    print('断掉的连接关系:bradk_graph：', bradk_graph)
-    end_time = datetime.now()
+    # temp_list = []
+    # for i in smiles_list:
+    #     if i != '(' and i != ')':
+    #         temp_list.append(i)
+    # print('temp_list', temp_list)
+    # print('len(temp_list)', len(temp_list))
+    break_graph = get_break_graph(graph=graph, new_graph=no_circle_graph)
+    print('断掉的连接关系:bradk_graph：', break_graph)
+    # 找六元环
+    cyc_six = cyc_6(M_S_A=M_S_A, M_S=M_S)
+    # 找苯环
+    ben_num, cyc_ben, M_bon_1 = find_ben_modify_bon(M_bon_=M_bon_, cyc_six=cyc_six)
+
+    smiles_lst, smiles_atom_lst = add_element(smiles_lst=smiles, M_atom=M_atom, ben_num=ben_num)
+    smiles_lst, smiles_atom_lst = add_bond(M_adj=M_adj, M_atom_H=M_atom_H, smiles_lst=smiles_lst,
+                                           smiles_atom_lst=smiles_atom_lst, M_atom=M_atom, M_bon_modif=M_bon_1)
+    smiles_lst, smiles_atom_lst = add_bre(bre_dic=break_graph, smiles_lst=smiles_lst, smiles_atom_lst=smiles_atom_lst)
+    print(''.join(smiles_atom_lst))
+
     end = time.perf_counter()
-    print(f'消耗的时间为：{(end_time - start_time).seconds}')
     print(f'这个程序调用cpu消耗的时间为：{(end - start)}')

@@ -1,6 +1,4 @@
 import time
-from typing import List
-
 graph = {1: [2, 6, 7],
          2: [1, 3, 88],
          3: [2, 4, 8],
