@@ -33,7 +33,12 @@ def get_final_side(side_set_list=None):
 
 
 # 找到侧链的集合列表
-def find_side(graph, result):
+def find_side(graph=None, result=None):
+    """
+    :param graph:
+    :param result: 深度遍历的序列
+    :return: 侧链集合
+    """
     # 存储所有侧链的原子
     side_list = []
     # 存储所有侧链的集合列表
@@ -59,11 +64,44 @@ def find_side(graph, result):
                 side_set_list.append(temp_set_list)
                 temp_set_list = []
         else:
-            # 最后一个原子需要再判断一下,如果前面一个没有和最后这个原子连续，则最后的原子单独成一个集合
-            if side_list[index] not in side_set_list:
-                side_set_list.append([side_list[index]])
+            # 如果前面的原子和最后一个原子不相连，只需要加一下这个原子就行
+            if len(temp_set_list) == 0:
+                temp_set_list.append(side_list[index])
+            side_set_list.append(temp_set_list)
             return side_set_list
-            # print(side_set)
+            # 最后一个原子需要再判断一下,如果前面一个没有和最后这个原子连续，则最后的原子单独成一个集合
+            # if side_list[index] not in side_set_list:
+            #     side_set_list.append([side_list[index]])
+            # return side_set_list
+
+
+def find_side_list(graph=None, original_side_list=None):
+    """
+    :param graph: 无环图
+    :param original_side_list: 侧链的序列
+    :return: side_set_list（侧链的集合）
+    """
+    # 存储所有侧链的集合列表
+    side_set_list = []
+    temp_set_list = []
+    # 找侧链的集合列表
+    for index in range(0, len(original_side_list)):
+        if index != len(original_side_list) - 1:
+            # 没进去的话，先进一个
+            if original_side_list[index] not in temp_set_list:
+                temp_set_list.append(original_side_list[index])
+            # 找相邻的两个原子是否有直接连接关系，有则放一起
+            if original_side_list[index] in graph[original_side_list[index + 1]]:
+                temp_set_list.append(original_side_list[index + 1])
+            else:
+                side_set_list.append(temp_set_list)
+                temp_set_list = []
+        else:
+            # 如果前面的原子和最后一个原子不相连，只需要加一下这个原子就行
+            if len(temp_set_list) == 0:
+                temp_set_list.append(original_side_list[index])
+            side_set_list.append(temp_set_list)
+            return side_set_list
 
 
 def find_mainList(aim_list):

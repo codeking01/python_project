@@ -726,35 +726,36 @@ def diff_main_side(graph=None, result=None, end_flag=None):
     :param end_flag: 结束标志
     :return: 带‘#’的result,无#的原子是主路
     """
-    for i in range(0, len(result) - 1):
-        if result[i] != end_flag:
-            if result[i] in graph[result[i + 1]]:
+    result_copy = copy.deepcopy(result)
+    for i in range(0, len(result_copy) - 1):
+        if result_copy[i] != end_flag:
+            if result_copy[i] in graph[result_copy[i + 1]]:
                 continue
-            result[i] = '#' + result[i]
+            result_copy[i] = '#' + result_copy[i]
             # 找相连的原子
             for j in range(0, i - 1):
-                if result[i - 1 - j] in graph[result[i + 1]]:
+                if result_copy[i - 1 - j] in graph[result_copy[i + 1]]:
                     break
-                    # result.remove(result[i - 1])
-                result[i - 1 - j] = '#' + result[i - 1 - j]
+                    # result_copy.remove(result_copy[i - 1])
+                result_copy[i - 1 - j] = '#' + result_copy[i - 1 - j]
         else:
             # 将列表后面的元素全部删除
-            end_index = result.index(end_flag)
-            result[end_index + 1:] = ['#' + item for item in result[end_index + 1:]]
+            end_index = result_copy.index(end_flag)
+            result_copy[end_index + 1:] = ['#' + item for item in result_copy[end_index + 1:]]
             break
-    return result
+    return result_copy
 
 
-def get_max_road(atom_list=None, no_circle_graph=None, start=None):
+def get_max_road(result=None, atom_list=None, no_circle_graph=None):
     """
+    :param result: 深度优先遍历的序列
     :param atom_list: 度为0的原子列表
     :param no_circle_graph: 无环的图，并且排好了优先级
-    :param start: 从优先级最小的开始
     :return:  max_final_result(最终结果),  max_main_list(最长主路),max_side_list(侧路)
     """
     max_main_list = []
     for i in atom_list:
-        result, no_circle_graph, unique_link_graph = code_king_DFS(graph=no_circle_graph, start=str(start))
+        # result, no_circle_graph, unique_link_graph = code_king_DFS(graph=no_circle_graph, start=str(start))
         # print('深度优先序列：', result)
         final_result = diff_main_side(graph=no_circle_graph, result=result, end_flag=f'{i}')
         # print('主侧链连接关系：', final_result)
@@ -767,6 +768,35 @@ def get_max_road(atom_list=None, no_circle_graph=None, start=None):
             max_side_list = copy.deepcopy(side_list)
         # print('侧边链路：', sideList)
     return max_final_result, max_main_list, max_side_list
+
+
+def find_side_list(graph=None, original_side_list=None):
+    """
+    :param graph: 无环图
+    :param original_side_list: 侧链的序列
+    :return: side_set_list（侧链的集合）
+    """
+    # 存储所有侧链的集合列表
+    side_set_list = []
+    temp_set_list = []
+    # 找侧链的集合列表
+    for index in range(0, len(original_side_list)):
+        if index != len(original_side_list) - 1:
+            # 没进去的话，先进一个
+            if original_side_list[index] not in temp_set_list:
+                temp_set_list.append(original_side_list[index])
+            # 找相邻的两个原子是否有直接连接关系，有则放一起
+            if original_side_list[index] in graph[original_side_list[index + 1]]:
+                temp_set_list.append(original_side_list[index + 1])
+            else:
+                side_set_list.append(temp_set_list)
+                temp_set_list = []
+        else:
+            # 如果前面的原子和最后一个原子不相连，只需要加一下这个原子就行
+            if len(temp_set_list) == 0:
+                temp_set_list.append(original_side_list[index])
+            side_set_list.append(temp_set_list)
+            return side_set_list
 
 # def get_all_max_road(graph=None):
 #     max_road = []

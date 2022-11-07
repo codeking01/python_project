@@ -6,6 +6,9 @@ import time
 import numpy as np
 from numpy import mat, inf
 
+from Task.arithmetic.ToSMILES import exchange_graph, gjf_to_smiles, find_side, get_final_side, get_break_graph
+from Task.arithmetic.utils.smiles_tools import get_max_road, get_degree_zero, code_king_DFS, find_side_list
+
 elements_table = {
     'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O': 8, 'F': 9, 'Ne': 10,
     'Na': 11, 'Mg': 12, 'Al': 13, 'Si': 14, 'P': 15, 'S': 16, 'Cl': 17, 'Ar': 18, 'K': 19, 'Ca': 20,
@@ -173,7 +176,7 @@ def get_graph(n_atom_nH, atom_num, connect_H_num, M_S_A_nH, M_bon_2_nH, M_S_nH, 
                 M_cul_0[i, ss_w] = rank_prime[ss_w]
             for i in range(n_atom_nH):
                 ss_w = np.where(M_cul_0[i, :] != 0)[0]
-                rank_prime_mult[i] = np.prod(M_cul_0[i, ss_w])
+                rank_prime_mult[i] = np.prod(M_cul_0[i, ss_w],dtype=int)
             rank_1 = sort_3(a1=rank_0, a2=rank_prime_mult)
             rank_0 = rank_1
             end_flag = len(list(set(rank_0.tolist())))
@@ -583,7 +586,7 @@ def add_element(smiles_lst, M_atom_nH, ben_num, sym):
             smiles_atom_lst.append(x)
         else:
             smiles_atom_lst.append(smiles_lst[i])
-    return smiles_lst, smiles_atom_lst
+    return smiles_lst, smiles_atom_lst, M_atom_nH_f
 
 
 def add_bond(M_adj, smiles_lst, smiles_atom_lst, M_atom, M_bon_modif):
@@ -813,6 +816,72 @@ def sym1(graph, x_atom):
     return smiles_lst, new_graph
 
 
+def get_new_M(bre_dic=None, M_S_A=None, M_S=None, M_bon=None):
+    """
+    :param bre_dic: 断键字典
+    :param M_S_A: 相邻矩阵
+    :param M_S: 步长矩阵
+    :param M_bon: 键值矩阵
+    :return: 新的三个矩阵
+    """
+    bre_dic_copy = copy.deepcopy(bre_dic)
+    M_S_A_new = copy.deepcopy(M_S_A)
+    M_S_new = copy.deepcopy(M_S)
+    M_bon_new = copy.deepcopy(M_bon)
+    bre_dic_keys = list(bre_dic_copy.keys())
+    bre_dic_values = list(bre_dic_copy.values())
+    for i in range(len(bre_dic_keys)):
+        x1 = int(bre_dic_keys[i]) - 1
+        for j in range(len(bre_dic_values[i])):
+            x2 = int(bre_dic_values[i][j]) - 1
+            M_S_A_new[x1, x2] = 0
+            M_S_new[x1, x2] = 0
+            M_bon_new[x1, x2] = 0
+    return M_S_A_new, M_S_new, M_bon_new
+
+
+def sort_rank_graph(x_atom=None, no_circle_graph=None):
+    """
+    :param x_atom: rank序列
+    :param no_circle_graph: 无环图
+    :return: 排好序列的无环图
+    """
+    no_circle_graph_copy = copy.deepcopy(no_circle_graph)
+    x_atom_copy = [str(i) for i in x_atom]
+    for i in no_circle_graph_copy:
+        item = no_circle_graph_copy[i]
+        item.sort(key=x_atom_copy.index)
+        no_circle_graph_copy[i] = item
+    return no_circle_graph_copy
+
+
+def get_new_adj_nH(no_circle_graph=None):
+    """
+    :param no_circle_graph: 无环图
+    :return: 新的无H的连接关系
+    """
+    new_adj_nH = list(no_circle_graph.values())
+    for i in range(len(new_adj_nH)):
+        for j in range(len(new_adj_nH[i])):
+            new_adj_nH[i][j] = int(new_adj_nH[i][j])
+    return new_adj_nH
+
+
+def inspect_length(side_set_list=None):
+    """
+    :param side_set_list: side_set_list 侧链集合
+    :return: 侧链的长度
+    """
+    side_set_list_length = 0
+    for i in side_set_list:
+        side_set_list_length += len(i)
+    temp = []
+    for i in side_set_list:
+        for k in i:
+            temp.append(k)
+    return len(temp)
+
+
 def gifToSMILES(gjf_path):
     MSI_gjf = msi_gjf(gjf_path=gjf_path)
     M_S_A = np.array(MSI_gjf['M_S_A'])
@@ -850,19 +919,45 @@ def gifToSMILES(gjf_path):
         smiles_lst, new_graph = sym1(graph=graph, x_atom=x_atom)
         bre_dic, M_bon_2_new = break_bond(graph=graph, new_graph=new_graph, M_bon_2=M_bon_nH_2)
     else:
-        dfs_result, new_graph = DFS(graph=graph, start=x_atom[-1])
-
-        bre_dic, M_bon_nH_2_new = break_bond(graph=graph, new_graph=new_graph, M_bon_2=M_bon_nH_2)
-
-        new_adj_nH = list(new_graph.values())
-        M_S_A_nH_new, MS_nH_new = gen_MS(M_adj=new_adj_nH, n_atom=n_atom_nH)
-        max_step = np.max(MS_nH_new)
-        ss_w = np.where(MS_nH_new == max_step)
-        main_atom_index = find_main(new_MS=MS_nH_new, new_adj=new_adj_nH, ss_w=ss_w)
-        smiles_lst = produce_SMILES_num(new_MS=MS_nH_new, main_atom_index=main_atom_index, new_adj=new_adj_nH)
-    smiles_lst, smiles_atom_lst = add_element(smiles_lst=smiles_lst, M_atom_nH=M_atom_nH, ben_num=ben_num, sym=sym)
+        graph = exchange_graph(graph=graph)
+        result, no_circle_graph, unique_link_graph = code_king_DFS(graph=graph, start=str(x_atom[-1]))
+        bre_dic = get_break_graph(graph=graph, new_graph=no_circle_graph)
+        M_S_A_nH_new, M_S_nH_new, M_bon_nH_new = get_new_M(bre_dic=bre_dic, M_S_A=M_S_A_nH, M_S=M_S_nH,
+                                                           M_bon=M_bon_nH_2)
+        new_adj_nH = get_new_adj_nH(no_circle_graph=no_circle_graph)
+        graph, x_atom, rank_0, sym = get_graph(n_atom_nH=n_atom_nH, atom_num=atom_num, connect_H_num=connect_H_num,
+                                               M_S_A_nH=M_S_A_nH_new, M_bon_2_nH=M_bon_nH_new, M_S_nH=M_S_nH_new,
+                                               M_adj_nH=new_adj_nH)
+        graph = exchange_graph(graph=graph)
+        result, no_circle_graph, unique_link_graph = code_king_DFS(graph=graph, start=str(x_atom[-1]))
+        # no_circle_graph=sort_rank_graph(x_atom=x_atom, no_circle_graph=no_circle_graph)
+        # result, sec_no_circle_graph, unique_link_graph = code_king_DFS(graph=no_circle_graph, start=str(x_atom[-1]))
+        # 只需要找到度为0的就行
+        zero_list = get_degree_zero(no_circle_graph=no_circle_graph)
+        # max_road, final_result, mainList, sideList = get_max_road(atom_list=zero_list, no_circle_graph=no_circle_graph,start=str(x_atom[-1]))
+        max_final_result, max_main_list, max_side_list = get_max_road(result=result, atom_list=zero_list,
+                                                                      no_circle_graph=no_circle_graph)
+        print(f'\n***max_road,长度为{len(max_main_list)}，如下：{max_main_list}')
+        print(f'\n***unique_link_graph:{unique_link_graph}')
+        # side_set_list = find_side(graph=no_circle_graph, result=max_final_result)
+        side_set_list = find_side_list(graph=no_circle_graph, original_side_list=max_side_list)
+        # 校验主侧和和原来的长度一致
+        # inspect_length(side_set_list=side_set_list)
+        print(
+            f"主测和与DFS生成长度一致性{inspect_length(side_set_list=side_set_list) + len(max_main_list) == len(result)}")
+        print(f'侧链集合,长度为：', side_set_list)
+        final_side = get_final_side(side_set_list=side_set_list)
+        print('升序侧链集合：', final_side)
+        smiles_list = gjf_to_smiles(unique_link_graph=unique_link_graph, main_list=max_main_list, final_side=final_side)
+        print('SMILES:smiles_list：', smiles_list)
+        smiles_lst = ','.join(smiles_list)
+        print('SMILES:smiles结果：', smiles_lst)
+        # bre_dic = get_break_graph(graph=graph, new_graph=no_circle_graph)
+        # print('断掉的连接关系:bradk_graph：', bre_dic)
+    smiles_lst, smiles_atom_lst, M_atom_nH_f = add_element(smiles_lst=smiles_lst, M_atom_nH=M_atom_nH, ben_num=ben_num,
+                                                           sym=sym)
     smiles_lst, smiles_atom_lst = add_bond(M_adj=M_adj_nH, smiles_lst=smiles_lst,
-                                           smiles_atom_lst=smiles_atom_lst, M_atom=M_atom_nH, M_bon_modif=M_bon_nH_1)
+                                           smiles_atom_lst=smiles_atom_lst, M_atom=M_atom_nH_f, M_bon_modif=M_bon_nH_1)
     smiles_lst, smiles_atom_lst = add_bre(bre_dic=bre_dic, smiles_lst=smiles_lst, smiles_atom_lst=smiles_atom_lst)
     SMILES = ''.join(smiles_atom_lst)
     return SMILES
@@ -870,7 +965,7 @@ def gifToSMILES(gjf_path):
 
 if __name__ == "__main__":
     t1 = time.time()
-    gjf_path = './test/C60.gjf'
+    gjf_path = '../test/111.gjf'
     SMILES = gifToSMILES(gjf_path=gjf_path)
     t2 = time.time()
     print(SMILES)
