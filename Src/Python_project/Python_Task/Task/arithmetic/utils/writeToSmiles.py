@@ -1,10 +1,7 @@
+# auth: code_king
+# time: 2022/11/9 13:24
+# file: writeToSmiles.py
 import copy
-import time
-
-import numpy as np
-
-from Task.arithmetic.utils.smiles_tools import msi_gjf, cyc_6, find_ben_modify_bon, add_element, add_bond, add_bre, \
-    get_graph
 
 
 def exchange_graph(graph=None):
@@ -48,7 +45,6 @@ def find_side(graph=None, result=None):
         if '#' in item:
             item = item.replace("#", "")
             side_list.append(item)
-    # print(side_list)
     # 临时集合列表
     temp_set_list = []
     # 找侧链的集合列表
@@ -108,7 +104,8 @@ def find_mainList(aim_list):
     # 存储主链路
     mian_list = []
     for item in aim_list:
-        if '#' not in item: mian_list.append(item)
+        if '#' not in item:
+            mian_list.append(item)
     return mian_list
 
 
@@ -263,28 +260,6 @@ def get_break_graph(graph=None, new_graph=None):
     return break_graph
 
 
-def get_all_max_road(graph=None):
-    max_road = []
-    for i in range(1, len(graph) + 1):
-        # for i in range(3, 4):
-        result, no_circle_graph, unique_link_graph = DFS(graph=graph, start=str(i))
-        # 只需要找到度为0的就行
-        zero_list = get_degree_zero(no_circle_graph=no_circle_graph)
-        all_max_road, final_result, main_list, side_list = get_max_road(atom_list=zero_list,
-                                                                        no_circle_graph=no_circle_graph, start=str(i))
-        if len(all_max_road) > len(max_road):
-            max_road = copy.deepcopy(all_max_road)
-            max_final_result = copy.deepcopy(final_result)
-            max_main_list = copy.deepcopy(main_list)
-            max_side_list = copy.deepcopy(side_list)
-            max_unique_link_graph = copy.deepcopy(unique_link_graph)
-            max_result, max_no_circle_graph = copy.deepcopy(result), copy.deepcopy(no_circle_graph)
-            # print('深度优先序列：', result)
-            # print('\nNo_Circle_graph：', no_circle_graph)
-            # print('*******************************************************')
-    return max_road, max_final_result, max_main_list, max_side_list, max_result, max_no_circle_graph, max_unique_link_graph
-
-
 def get_insert_main_atom(insert_atom=None):
     """
     :param insert_atom: 插入的列表
@@ -302,6 +277,7 @@ def get_insert_main_atom(insert_atom=None):
 
 
 def change_side_main(aim_list=None, end_index=None, end_flag=None):
+    global left_side_length, right_side_length, left_start_index, right_end_index
     if end_flag == False:
         stack = []
         for i in range(end_index - 1, -1, -1):
@@ -369,8 +345,13 @@ def side_to_main(insert_index=None, aim_list=None, insert_atom=None):
     # 单独计算 insert_atom的主原子个数
     insert_mian_atom = get_insert_main_atom(insert_atom=insert_atom)
     for i in range(insert_index + 1, len(aim_list)):
-        if i == len(aim_list) - 1 and stack[-1] != ')' and len(stack) + 1 < len(insert_mian_atom):
-            end_index = i + 1
+        if i == len(aim_list) - 1:
+            if len(stack) > 0 and stack[-1] != ')' and len(stack) + 1 < len(insert_mian_atom):
+                end_index = i + 1
+            elif len(stack) + 1 < len(insert_mian_atom):
+                end_index = i + 1
+        # if i == len(aim_list) - 1 and stack[-1] != ')' and len(stack) + 1 < len(insert_mian_atom):
+        #     end_index = i + 1
         if aim_list[i] == ')':
             if len(stack) > 0 and stack[-1] == '(':
                 stack.pop()
@@ -400,18 +381,17 @@ def side_to_main(insert_index=None, aim_list=None, insert_atom=None):
         # print(aim_list[end_index-1])
     else:
         # 修改面的支链为侧链，外面的支链为主链
-        # print('shjshjjhshj', aim_list[end_index])
         aim_list.insert(insert_index + 1, f'(')
         aim_list.insert(end_index + 1, f')')
         for insert_atom_index in range(1, len(insert_atom) + 1):
             aim_list.insert(end_index + insert_atom_index + 1, f'{insert_atom[insert_atom_index - 1]}')
         # 局部最后括号的索引 (,44,(,45,),46,48,49,50,61,62,63,)
         # 改变支链以后，局部变长，所以外部也需要重新检验 这个是右括号的位置
-        # todo 有错
+        # end_index可能有错
         end_index = end_index + 1 + len(insert_atom) + 1
         if end_index < len(aim_list) - 1:
             print(aim_list[end_index])
-            # TODO: 判断支链变化
+            # 判断支链变化
             aim_list = change_side_main(aim_list=aim_list, end_index=end_index, end_flag=False)
         else:
             return aim_list
@@ -421,7 +401,8 @@ def side_to_main(insert_index=None, aim_list=None, insert_atom=None):
 def insert_aim_list(aim_list=None, aim_atom=None, insert_atom=None):
     """
     :param aim_list: 连接原子的节点
-    :param aim_atom: 插入的原子,是一个列表
+    :param aim_atom: 被插入的原子,是一个列表
+    :param insert_atom: 需要去插入的原子
     :return:
     """
     insert_index = aim_list.index(aim_atom)
@@ -456,11 +437,6 @@ def insert_final_side(final_side=None, aim_atom=None, insert_atom=None):
                 # 需要判断这个原子的局部主路原子的长度  如果是3连接1。3,4,5并入 1,6,(,%10,),7。那么考虑6,7,比3,4,5短需要改写成:1,(,6,(,%10,),7,),3,4,5
                 final_side[out_index] = side_to_main(insert_index=insert_index, aim_list=final_side[out_index],
                                                      insert_atom=insert_atom)
-                # final_side[out_index].insert(insert_index, f'(')
-                # for insert_atom_index in range(1, len(insert_atom) + 1):
-                #     insert_index += 1
-                #     final_side[out_index].insert(insert_index, f'{insert_atom[insert_atom_index - 1]}')
-                # final_side[out_index].insert(insert_index + 1, f')')
             return final_side
 
 
@@ -477,52 +453,3 @@ def number_to_smiles(unique_link_graph=None, main_list=None, final_side=None):
         else:
             insert_final_side(final_side=final_side, aim_atom=aim_atom, insert_atom=insert_atom)
     return smiles_list
-
-
-if __name__ == "__mian__":
-    start = time.time()
-    gjf_path = './test/111.gjf'
-    MSI_gjf = msi_gjf(gjfpath=gjf_path)
-    M_adj = MSI_gjf['M_adj']
-    M_S_A = np.array(MSI_gjf['M_S_A'])
-    M_S = np.array(MSI_gjf['M_S'])
-    M_bon_ = np.array(MSI_gjf['M_bon_'])
-    M_atom = MSI_gjf['M_atom']
-    n_atom = MSI_gjf['n_atom']
-    graph, M_atom_H = get_graph(M_adj=M_adj, M_atom=M_atom)
-    sec_graph = copy.deepcopy(graph)
-    graph = exchange_graph(graph=graph)
-    sec_graph = exchange_graph(graph=sec_graph)
-    max_road, final_result, mainList, sideList, result, no_circle_graph, unique_link_graph = get_all_max_road(
-        graph=sec_graph)
-    print(f'\n***max_road,长度为{len(max_road)}，如下：{max_road}')
-    print(f'\n***unique_link_graph:{unique_link_graph}')
-    side_set_list = find_side(graph=no_circle_graph, result=final_result)
-    print('侧链集合：', side_set_list)
-    final_side = get_final_side(side_set_list=side_set_list)
-    print('升序侧链集合：', final_side)
-    smiles_list = number_to_smiles(unique_link_graph=unique_link_graph, main_list=mainList, final_side=final_side)
-    print('SMILES:smiles_list：', smiles_list)
-    smiles = ','.join(smiles_list)
-    print('SMILES:smiles结果：', smiles)
-    # temp_list = []
-    # for i in smiles_list:
-    #     if i != '(' and i != ')':
-    #         temp_list.append(i)
-    # print('temp_list', temp_list)
-    # print('len(temp_list)', len(temp_list))
-    break_graph = get_break_graph(graph=graph, new_graph=no_circle_graph)
-    print('断掉的连接关系:bradk_graph：', break_graph)
-    # 找六元环
-    cyc_six = cyc_6(M_S_A=M_S_A, M_S=M_S)
-    # 找苯环
-    ben_num, cyc_ben, M_bon_1 = find_ben_modify_bon(M_bon_=M_bon_, cyc_six=cyc_six)
-
-    smiles_lst, smiles_atom_lst = add_element(smiles_lst=smiles, M_atom=M_atom, ben_num=ben_num)
-    smiles_lst, smiles_atom_lst = add_bond(M_adj=M_adj, M_atom_H=M_atom_H, smiles_lst=smiles_lst,
-                                           smiles_atom_lst=smiles_atom_lst, M_atom=M_atom, M_bon_modif=M_bon_1)
-    smiles_lst, smiles_atom_lst = add_bre(bre_dic=break_graph, smiles_lst=smiles_lst, smiles_atom_lst=smiles_atom_lst)
-    print(''.join(smiles_atom_lst))
-
-    end = time.time()
-    print(f'消耗的时间为：{(end - start)}')
