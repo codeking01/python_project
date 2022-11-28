@@ -8,6 +8,8 @@
 import pandas as pd
 from numpy import unique
 import numpy as np
+
+from ML_JuneTask.DimensionalityReduction import DataDelete
 from ML_JuneTask.NewPreDeal_Tools import Del_deletion_data, Deal_sorted_Ydata, get_final_useablecols, all_ydata, \
     delAndGetCols, get_merge_tabledata, deal_verify_ydata, get_former_Ydata, convert_to_num
 
@@ -47,12 +49,16 @@ if __name__ == '__main__':
     Verify_TABLE_TWO, Verify_TABLE_THREE, Verify_TABLE_FOUR, Verify_TABLE_FIVE, Verify_TABLE_SIX = get_merge_tabledata(
         excel_data=Preddata)
     # 统一关键字
-    the_Former_data, the_Verify_TABLE_data = convert_to_num(FormerFive_data, Verify_TABLE_FIVE)
+    the_Former_data, the_Verify_TABLE_data = convert_to_num(FormerSix_data, Verify_TABLE_SIX)
     # 删除缺失值过多的列，并保存del_cols
     # tempFormerTwo_data = delAndGetCols(FormerTwo_data)
     base_Xdata, del_cols = delAndGetCols(the_Former_data)
     # 用del_cols删除验证集X不需要的列
     Verify_Xdata = np.delete(the_Verify_TABLE_data, del_cols, axis=1)
+    # 降维处理,这个地方只从训练集判断相关性，然后统一降维
+    use_able_x_cols = DataDelete(base_Xdata, 0.90)
+    base_Xdata = base_Xdata[:,use_able_x_cols]
+    Verify_Xdata = Verify_Xdata[:,use_able_x_cols]
     # base_Xdata,del_cols
     # %%
     # 获取源建模的数据Y_data
@@ -64,14 +70,14 @@ if __name__ == '__main__':
     # %%
     # 将Y取出来，然后取出缺失值过多的列
     # 获取可用的列
-    Original_TableYdata, Predict_TableYdata=Original_TableSixYdata, Predict_TableSixYdata
+    Original_TableYdata, Predict_TableYdata=Original_TableSevenYdata, Predict_TableSevenYdata
     final_cols = get_final_useablecols(Original_TableYdata, Predict_TableYdata)
     # final_cols
     # %%
     # 获取可以用的Y_data
     Original_YdataList, Pred_YdataList = all_ydata(final_cols, Original_TableYdata, Predict_TableYdata)
 
-
+# 写入excel文件
 def write_to_excel(start_index, table, current_column, content):
     # 标签
     for i in range(len(content)):
@@ -83,7 +89,7 @@ def write_to_excel(start_index, table, current_column, content):
 # 挨个遍历，取出有用的Y_data
 # 传入起始的坐标 24,67,108,145,179
 # 传入起始的坐标新表 22,31,50,71,88
-the_column = 71
+the_column = 88
 start = 0
 for index in final_cols:
     # 建模的Y_data
@@ -116,8 +122,8 @@ for index in final_cols:
     # 切分训练数据和测试数据
     from sklearn.model_selection import train_test_split
 
-    ## 30%测试数据，70%训练数据，stratify=y表示训练数据和测试数据具有相同的类别比例
-    X_train, X_test, y_train, y_test = train_test_split(X_data, Y_data, test_size=0.3, random_state=2, stratify=Y_data)
+    ## 30%测试数据，70%训练数据，stratify=y表示训练数据和测试数据具有相同的类别比例 修改为0.4
+    X_train, X_test, y_train, y_test = train_test_split(X_data, Y_data, test_size=0.4, random_state=2, stratify=Y_data)
     from sklearn.metrics import accuracy_score
     # 开始训练模型
     from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier

@@ -4,7 +4,7 @@
     @Data : 2022/6/18 23:55
     @File : PreDeal_Tools.py
 """
-from copy import copy
+from copy import copy, deepcopy
 from math import ceil
 
 # 所有的方法汇总
@@ -12,17 +12,23 @@ from math import ceil
 import numpy as np
 
 
-def Del_deletion_data(datavalue, flag):
+def Del_deletion_data(dataValue, flag):
+    """
+    :param dataValue: 需要处理的数据
+    :param flag: flag是1则删除列，如果是0则删除行
+    :return:
+    """
+    dataValueCopy=deepcopy(dataValue)
     # 删除缺失值过多的列
     if flag == 1:
         del_cols = []
         # 先拿到元数据的长度
-        baseLength = datavalue.shape[0]
+        baseLength = dataValueCopy.shape[0]
         # 这个 用来保存需要删除的列
-        iterLength = datavalue.shape[1]
+        iterLength = dataValueCopy.shape[1]
         for i in range(iterLength):
             temp = []
-            temp = np.where(np.isnan(datavalue[:, i].astype(float)) == True)[0].tolist() + temp
+            temp = np.where(np.isnan(dataValueCopy[:, i].astype(float)) == True)[0].tolist() + temp
             # print(temp)
             # 用集合去重
             c = set(temp)
@@ -30,19 +36,19 @@ def Del_deletion_data(datavalue, flag):
             lack_of_rows = len(c)
             if lack_of_rows > 0.3 * baseLength:
                 del_cols.append(i)
-                # print(datavalue)
+                # print(dataValueCopy)
         # flag是1则删除列，如果是0则删除行
-        final_data = np.delete(datavalue, del_cols, axis=flag)
+        final_data = np.delete(dataValueCopy, del_cols, axis=flag)
         # elif flag == 0:
         #     del_raws=[]+temp
         return final_data, del_cols
     # 删除含有缺失值的行
     elif flag == 0:
         # 筛选出含有缺失值的行，用set去重
-        del_raws = set(np.where(np.isnan(datavalue.astype(float)) == True)[0].tolist())
+        del_raws = set(np.where(np.isnan(dataValueCopy.astype(float)) == True)[0].tolist())
         del_raws = list(del_raws)
-        final_data = np.delete(datavalue, del_raws, axis=flag)
-    return final_data
+        final_data = np.delete(dataValueCopy, del_raws, axis=flag)
+        return final_data
 
 
 # 将 数据比较一下:① 必须是两边都有的数据才可以进行预测或者建模，②数据量必须是超过70%
@@ -140,7 +146,8 @@ def find_keyword(func):
             # 转化类型
             if flag == True:
                 current_pred_col = args[1][:, i]
-                args[0][:, i], args[1][:, i], del_list = func(current_original_col.astype(str),current_pred_col.astype(str), del_list, i)
+                args[0][:, i], args[1][:, i], del_list = func(current_original_col.astype(str),
+                                                              current_pred_col.astype(str), del_list, i)
         args0 = np.delete(args[0], del_list, axis=1)
         args1 = np.delete(args[1], del_list, axis=1)
         return (args0, args1)
