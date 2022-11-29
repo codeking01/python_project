@@ -243,25 +243,29 @@ def get_merge_tabledata(excel_data=None):
     # TABLE_ONE[:, 12] = convert_to_num(TABLE_ONE[:, 12].astype(str))
     TABLE_TWO = excel_data[3:, 18:21]
     # 处理表3
-    TABLE_THREE = excel_data[3:, 27:30]
+    # TABLE_THREE = excel_data[3:, 27:30]
     # 加上工序二的输出
-    # TABLE_THREE = excel_data[3:, 21:30]
+    TABLE_THREE = excel_data[3:, 21:30]
+
     # 这个地方必须转成字符串   处理掉汉字
     # TABLE_THREE[:, -1] = convert_to_num(TABLE_THREE[:, -1].astype(str))
     # 处理表4 工序四没有输出out,所有直接和工序五合在一起
-    TABLE_FOUR = excel_data[3:, 34:49]
+    # TABLE_FOUR = excel_data[3:, 34:49]
     # 加上工序三的输出
-    # TABLE_FOUR = excel_data[3:, 30:49]
+    TABLE_FOUR = excel_data[3:, 30:49]
+
     # TABLE_FOUR[:, -1] = convert_to_num(TABLE_FOUR[:, -1].astype(str))
     # 处理表5 处理的是工序六
-    TABLE_FIVE = excel_data[3:, 57:70]
+    # TABLE_FIVE = excel_data[3:, 57:70]
     #   加上工序五的输出
-    # TABLE_FIVE = excel_data[3:, 49:70]
+    TABLE_FIVE = excel_data[3:, 49:70]
+
     # TABLE_FIVE[:, -1] = convert_to_num(TABLE_FIVE[:, -1].astype(str))
     # 处理表6 处理的是工序七
-    TABLE_SIX = excel_data[3:, 83:87]
+    # TABLE_SIX = excel_data[3:, 83:87]
     # 加上工序六的输出
-    # TABLE_SIX = excel_data[3:, 70:87]
+    TABLE_SIX = excel_data[3:, 70:87]
+
     # TABLE_SIX[:, -1] = convert_to_num(TABLE_SIX[:, -1].astype(str))
     # # 处理表7
     # TABLE_SEVEN = excel_data[3:, 172:178]
