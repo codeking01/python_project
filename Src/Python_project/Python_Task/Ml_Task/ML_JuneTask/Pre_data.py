@@ -5,17 +5,23 @@
 还是5%异常来处理
 前面阶段的输入和输出是否都是下一个阶段的输入’和‘前面阶段的输入是下一个阶段的输入’两种方式都尝试一下
 """
+import copy
 import os
+import warnings
 
 import joblib
+import numpy as np
 import pandas as pd
 from numpy import unique
-import numpy as np
 
 from ML_JuneTask.DimensionalityReduction import DataDelete
-from ML_JuneTask.NewPreDeal_Tools import Del_deletion_data, Deal_sorted_Ydata, get_final_useablecols, all_ydata, \
-    delAndGetCols, get_merge_tabledata, deal_verify_ydata, get_former_Ydata, convert_to_num
+from ML_JuneTask.NewPreDeal_Tools import Del_deletion_data, get_final_useablecols, all_ydata, \
+    delAndGetCols, get_merge_tabledata, get_former_Ydata, convert_to_num, deal_verify_ydata, Deal_sorted_Ydata
+from ML_JuneTask.build_images.init_build_images import gen_images
+from utils.plot_error_distribution import write_images
 
+# warnings.filterwarnings(action='always', category=UserWarning)
+warnings.filterwarnings(action='ignore')
 # 这个pandas处理数据效果不太好 建议用numpy
 thedata = pd.read_excel(io=r'data_original.xlsx', sheet_name='8000D数据标准化-建模用')
 Preddata = pd.read_excel(io=r'data_original.xlsx', sheet_name='8000D数据标准化-预测用')
@@ -51,7 +57,7 @@ def write_to_excel(start_index, table, current_column, content):
         start_index += 1
 
 
-def save_model(model, model_name, X_train, X_test, y_train, y_test):
+def save_model(model, model_name, X_train, X_test, y_train, y_test, train_numbers):
     """
     :param model: 需要训练的模型
     :param X_train:
@@ -60,6 +66,7 @@ def save_model(model, model_name, X_train, X_test, y_train, y_test):
     :param y_test:
     :return:
     """
+    # 训练次数
     if not os.path.exists(f"models/{model_name}"):
         os.makedirs(name=f"models/{model_name}", exist_ok=True)
     acc_dic = {}
@@ -68,20 +75,23 @@ def save_model(model, model_name, X_train, X_test, y_train, y_test):
         # 训练集准确率
         model_train_acc = accuracy_score(y_train.astype(float), model.predict(X_train))
         # print('Rfc_train_acc准确率：', model_train_acc)
-        # model_pred = Rfc.predict(X_test)
-        # model_acc = accuracy_score(y_test.astype(float), model_pred)
+        model_pred = model.predict(X_test)
+        model_acc = accuracy_score(y_test.astype(float), model_pred)
+        # 取最小的
+        model_train_acc = min(model_train_acc, model_acc)
         acc_dic.update({f"model[{i}]": model_train_acc})
         # 模型保存
         joblib.dump(model, f'models/{model_name}/model[{i}].pkl')
-    for i in range(11, 101):
+    for i in range(11, train_numbers):
         # temp_keys 是键的按照值从小到打排序的列表 [model[1],model[5],...]
         temp_keys = sorted(acc_dic, reverse=True)
         model.fit(X_train, y_train.astype(float))
         # 训练集准确率
         model_train_acc = accuracy_score(y_train.astype(float), model.predict(X_train))
         # print('Rfc_train_acc准确率：', model_train_acc)
-        # model_pred = Rfc.predict(X_test)
-        # model_acc = accuracy_score(y_test.astype(float), model_pred)
+        model_pred = model.predict(X_test)
+        model_acc = accuracy_score(y_test.astype(float), model_pred)
+        model_train_acc = min(model_train_acc, model_acc)
         # 替换一个最小的模型
         for key_item_index in range(0, len(temp_keys)):
             if key_item_index != len(temp_keys) - 1:
@@ -148,6 +158,8 @@ def get_train_test_acc(model, X_train, y_train, X_test, y_test):
 if __name__ == '__main__':
     # 将表的内容 7个数据表 挨个处理
     # 获取源建模的X数据 传入的对象是获取的excel对象
+    # 获取标题内容
+    all_titles=thedata[1,:]
     FormerTwo_data, FormerThree_data, FormerFour_data, FormerFive_data, FormerSix_data = get_merge_tabledata(
         excel_data=thedata)
     # 获取预测的X数据
@@ -165,10 +177,13 @@ if __name__ == '__main__':
         base_Xdata, del_cols = delAndGetCols(the_Former_data)
         # 用del_cols删除验证集X不需要的列
         Verify_Xdata = np.delete(the_Verify_TABLE_data, del_cols, axis=1)
-        # 降维处理,这个地方只从训练集判断相关性，然后统一降维
+        # 降维处理,这个地方只从训练集判断相关性，然后统一降维·
         use_able_x_cols = DataDelete(base_Xdata, 0.80)
         base_Xdata = base_Xdata[:, use_able_x_cols]
         Verify_Xdata = Verify_Xdata[:, use_able_x_cols]
+        # 合并数据一起作为训练集
+        # all_train_x_data = np.r_[base_Xdata, Verify_Xdata]
+
         # base_Xdata,del_cols
         # %%
         # 获取源建模的数据Y_data
@@ -190,7 +205,8 @@ if __name__ == '__main__':
         # %%
         # 获取可以用的Y_data
         Original_YdataList, Pred_YdataList = all_ydata(final_cols, Original_TableYdata, Predict_TableYdata)
-
+        # 合并数据，训练的时候一起
+        # all_train_y_data = np.r_[Original_YdataList, Pred_YdataList]
         # %%
         # 挨个遍历，取出有用的Y_data
         # 传入起始的坐标 24,67,108,145,179
@@ -201,13 +217,17 @@ if __name__ == '__main__':
         for index in final_cols:
             # 建模的Y_data
             Modeling_Y_data = Original_YdataList[start]
-            # 预测的Y_data
+            # all_train_y_data全部用来训练
+            # Modeling_Y_data = Original_YdataList[:int(Pred_YdataList.shape[0] / 2)+1, :][start]
+            # 预测的Y_data，取一半测试，一半预测
             Pred_Y_data = Pred_YdataList[start]
+            # Pred_Y_data = Pred_YdataList[int(Pred_YdataList.shape[0] / 2) :, :][start]
             start += 1
             # 处理建模的X_data,Y_data
             temp_OriginalXdata = np.column_stack((base_Xdata, Modeling_Y_data))
             # 删除缺失的行
             temp_OriginalXdata = Del_deletion_data(temp_OriginalXdata, 0)
+            # X_data,Y_data 是第一个表处理好的x,y
             X_data = temp_OriginalXdata[:, :-1]
             Y_data = temp_OriginalXdata[:, -1]
             # 处理验证的X_data,Y_data
@@ -220,163 +240,93 @@ if __name__ == '__main__':
             Y_verify_data = temp_verifydata[:, -1]
             print(list(set(np.where(np.isnan(temp_OriginalXdata.astype(float)) == True)[0].tolist())),
                   list(set(np.where(np.isnan(temp_verifydata.astype(float)) == True)[0].tolist())))
-            # 将建模Y_data分类(-1,0,1)，并且取出边界值
-            Y_data, Y_data_boundsMin, Y_data_boundsMax = Deal_sorted_Ydata(Y_data)
-            # 获取预测数据的Y_data Verify_Ydata = Pred_Y_data
-            Verify_Ydata = deal_verify_ydata(Y_verify_data, Y_data_boundsMin, Y_data_boundsMax)
-            # 查看是否替换成功
-            print([unique(Y_data), Y_data_boundsMin, Y_data_boundsMax], np.unique(Verify_Ydata))
-            # 切分训练数据和测试数据
-            from sklearn.model_selection import train_test_split
 
-            ## 30%测试数据，70%训练数据，stratify=y表示训练数据和测试数据具有相同的类别比例 修改为0.4
-            X_train, X_test, y_train, y_test = train_test_split(X_data, Y_data, test_size=0.4, random_state=4,
-                                                                stratify=Y_data)
-            from sklearn.metrics import accuracy_score
-            # 开始训练模型
-            from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+            # 作图
+            # for x_item in range(0,X_data.shape[1]):
+            #     # write_image(X_left=X_data[:,x_item], X_right=X_verify_data[:,x_item], names=f"表{i}的{x_item}列")
+            #     write_images(X_left=X_data[:,x_item], X_right=X_verify_data[:,x_item], names=f"images/表{i}的{x_item}列.png")
 
-            # 获取模型  随机森林
-            Rfc = RandomForestClassifier()
-            model_name = "Rfc"
-            save_model(Rfc, model_name, X_train, X_test, y_train, y_test)
-            # 随便取一个作为训练集的结果
-            current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
-            Rfc_train_acc, Rfc_acc=get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
-            # Rfc.fit(X_train, y_train.astype(float))
-            # # 训练集准确率
-            # Rfc_train_acc = accuracy_score(y_train.astype(float), Rfc.predict(X_train))
-            # print('Rfc_train_acc准确率：', Rfc_train_acc)
-            # Rfc_pred = Rfc.predict(X_test)
-            # Rfc_acc = accuracy_score(y_test.astype(float), Rfc_pred)
-            # # 测试集准确率
-            # print('Rfc_acc准确率:', Rfc_acc)
+            if 1 == 1:
+                # 将建模Y_data分类(-1,0,1)，并且取出边界值
+                # 保留原始的数据
+                Y_data_original=copy.deepcopy(Y_data)
+                Y_data, Y_data_boundsMin, Y_data_boundsMax = Deal_sorted_Ydata(data=Y_data)
+                # 获取预测数据的Y_data Verify_Ydata = Pred_Y_data
+                # 保留原始的数据
+                Verify_Ydata_original = copy.deepcopy(Y_verify_data)
+                Verify_Ydata = deal_verify_ydata(Y_verify_data, Y_data_boundsMin, Y_data_boundsMax)
+                # 查看是否替换成功
+                print([unique(Y_data), Y_data_boundsMin, Y_data_boundsMax], np.unique(Verify_Ydata))
+                # 切分训练数据和测试数据
 
-            # 梯度提升树
-            Gbc = GradientBoostingClassifier()
-            model_name = "Gbc"
-            save_model(Gbc, model_name, X_train, X_test, y_train, y_test)
-            current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
-            Gbc_train_acc, Gbc_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
-            # Gbc.fit(X_train, y_train.astype(float))
-            # # 训练集准确率
-            # Gbc_train_acc = accuracy_score(y_train.astype(float), Gbc.predict(X_train))
-            # print('Gbc_train_acc准确率：', Gbc_train_acc)
-            # # 测试集准确率
-            # Gbc_pred = Gbc.predict(X_test)
-            # Gbc_acc = accuracy_score(y_test.astype(float), Gbc_pred)
-            # print('Gbc_acc准确率:', Gbc_acc)
+                ## 30%测试数据，70%训练数据，stratify=y表示训练数据和测试数据具有相同的类别比例 修改为0.25
+                # X_train, X_test, y_train, y_test = train_test_split(X_data, Y_data, test_size=0.25, random_state=4,stratify=Y_data)
+                # 手动划分数据集
+                X_train, X_test, y_train, y_test = X_data, X_verify_data[:int(X_verify_data.shape[0] / 2) + 1,
+                                                           :], Y_data, Y_verify_data[
+                                                                       :int(Y_verify_data.shape[0] / 2) + 1]
+                # 验证集
+                X_verify_data = X_verify_data[int(X_verify_data.shape[0] / 2) + 1:, :]
+                Y_verify_data = Y_verify_data[int(Y_verify_data.shape[0] / 2) + 1:]
+                from sklearn.metrics import accuracy_score
+                # 开始训练模型
+                from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 
-            # 使用SVM模型
-            from sklearn.svm import SVC
+                # 设置训练次数
+                train_numbers = 300
+                # 获取模型  随机森林
+                Rfc = RandomForestClassifier()
+                model_name = "Rfc"
+                save_model(Rfc, model_name, X_train, X_test, y_train, y_test, train_numbers)
 
-            Svc = SVC()
-            model_name = "Svc"
-            save_model(Svc, model_name, X_train, X_test, y_train, y_test)
-            current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
-            Svc_train_acc, Svc_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
-            # Svc.fit(X_train, y_train.astype(float))
-            # # 训练集准确率
-            # Svc_train_acc = accuracy_score(y_train.astype(float), Svc.predict(X_train))
-            # print('Svc_train_acc准确率：', Svc_train_acc)
-            # # 测试集准确率
-            # Svc_pred = Svc.predict(X_test)
-            # Svc_acc = accuracy_score(y_test.astype(float), Svc_pred)
-            # print('SVC准确率：', Svc_acc)
+                # 随便取一个作为训练集的结果
+                current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
+                Rfc_train_acc, Rfc_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
 
-            # 使用DNN模型
-            from sklearn.neural_network import MLPClassifier
+                Gbc = GradientBoostingClassifier()
+                model_name = "Gbc"
+                save_model(Gbc, model_name, X_train, X_test, y_train, y_test, train_numbers)
+                current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
+                Gbc_train_acc, Gbc_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
+                from sklearn.svm import SVC
 
-            Dnn = MLPClassifier()
-            model_name = "Dnn"
-            save_model(Dnn, model_name, X_train, X_test, y_train, y_test)
-            current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
-            Dnn_train_acc, Dnn_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
-            # Dnn.fit(X_train, y_train.astype(float))
-            # # 训练集准确率
-            # Dnn_train_acc = accuracy_score(y_train.astype(float), Dnn.predict(X_train))
-            # print('Dnn_train_acc准确率：', Dnn_train_acc)
-            # # 测试集准确率
-            # Dnn_pred = Dnn.predict(X_test)
-            # Dnn_acc = accuracy_score(y_test.astype(float), Dnn_pred)
-            # print('DNN准确率：', Dnn_acc)
+                Svc = SVC()
+                model_name = "Svc"
+                save_model(Svc, model_name, X_train, X_test, y_train, y_test, train_numbers)
+                current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
+                Svc_train_acc, Svc_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
 
-            # 使用卷积神经网络模型
-            from sklearn.neural_network import MLPClassifier
+                Rfc_pred = get_pred_data("Rfc", X_verify_data)
+                Gbc_pred = get_pred_data("Gbc", X_verify_data)
+                Svc_pred = get_pred_data("Svc", X_verify_data)
 
-            CNN = MLPClassifier()
-            model_name = "CNN"
-            save_model(CNN, model_name, X_train, X_test, y_train, y_test)
-            current_model = joblib.load(filename=f"models/{model_name}/model[0].pkl")
-            CNN_train_acc, CNN_acc = get_train_test_acc(current_model, X_train, y_train, X_test, y_test)
+                verify_y1 = accuracy_score(Y_verify_data.astype(float), Rfc_pred)
+                verify_y2 = accuracy_score(Y_verify_data.astype(float), Gbc_pred)
+                verify_y3 = accuracy_score(Y_verify_data.astype(float), Svc_pred)
 
-            # CNN.fit(X_train, y_train.astype(float))
-            # # 训练集准确率
-            # CNN_train_acc = accuracy_score(y_train.astype(float), CNN.predict(X_train))
-            # print('CNN_train_acc准确率：', CNN_train_acc)
-            # # 测试集准确率
-            # CNN_pred = CNN.predict(X_test)
-            # CNN_acc = accuracy_score(y_test.astype(float), CNN_pred)
-            # print('CNN准确率：', CNN_acc)
+                vereify_dic = {}
+                # 取分数最高的点保存
+                max_scores = max(verify_y1, verify_y2, verify_y3)
 
-            Rfc_pred = get_pred_data("Rfc", X_verify_data)
-            Gbc_pred = get_pred_data("Gbc", X_verify_data)
-            Svc_pred = get_pred_data("Svc", X_verify_data)
-            Dnn_pred = get_pred_data("Dnn", X_verify_data)
-            CNN_pred = get_pred_data("CNN", X_verify_data)
+                # gen_images(iter_left_data=None, iter_right_verify=None, files_name="final_results")
+                write_images(data_left=Y_data_original, data_right=Verify_Ydata_original,names=f"final_results/{all_titles[the_column + index-1]}.png", score=max_scores)
 
-            # Gbc_pred = Gbc.predict(X_verify_data)
-            # Svc_pred = Svc.predict(X_verify_data)
-            # Dnn_pred = Dnn.predict(X_verify_data)
-            # CNN_pred = CNN.predict(X_verify_data)
-            # 计算准确率
-            verify_y1 = accuracy_score(Y_verify_data.astype(float), Rfc_pred)
-            verify_y2 = accuracy_score(Y_verify_data.astype(float), Gbc_pred)
-            verify_y3 = accuracy_score(Y_verify_data.astype(float), Svc_pred)
-            verify_y6 = accuracy_score(Y_verify_data.astype(float), Dnn_pred)
-            verify_y7 = accuracy_score(Y_verify_data.astype(float), CNN_pred)
+                # 计算准确率
+                print('验证集Rfc_acc准确率:', verify_y1)
+                print('验证集Gbc_acc准确率:', verify_y2)
+                print('验证集SVC准确率：', verify_y3)
 
-            # 计算准确率
-            print('验证集Rfc_acc准确率:', verify_y1)
-            print('验证集Gbc_acc准确率:', verify_y2)
-            print('验证集SVC准确率：', verify_y3)
-            print('验证集DNN准确率：', verify_y6)
-            print('验证集CNN准确率：', verify_y7)
+                #  标签 都加20
+                write_to_excel(start_index=5, table=table, current_column=1,
+                               content=["训练集个数", "随机森林（Rfc）准确率", "梯度提升树（Gbc）准确率",
+                                        "支持向量机(Svc)准确率", "测试集个数", "随机森林（Rfc）准确率",
+                                        "梯度提升树（Gbc）准确率", "支持向量机(Svc)准确率", "验证集个数",
+                                        "随机森林（Rfc）准确率", "梯度提升树（Gbc）准确率", "支持向量机(Svc)准确率", ])
+                # 将训练集写入到excel中
+                write_to_excel(start_index=5, table=table, current_column=the_column + index,
+                               content=[X_train.shape[0], Rfc_train_acc, Gbc_train_acc, Svc_train_acc, X_test.shape[0],
+                                        Rfc_acc, Gbc_acc, Svc_acc,
+                                        X_verify_data.shape[0], verify_y1, verify_y2, verify_y3])
 
-            #  标签 都加20
-            write_to_excel(start_index=5, table=table, current_column=1,
-                           content=["训练集", "训练集", "训练集", "训练集", "训练集"])
-            # 将训练集写入到excel中
-            write_to_excel(start_index=5, table=table, current_column=the_column + index,
-                           content=[Rfc_train_acc, Gbc_train_acc, Svc_train_acc, Dnn_train_acc, CNN_train_acc])
-            # table.cell(5, the_column + index).value = Rfc_train_acc
-            # table.cell(6, the_column + index).value = Gbc_train_acc
-            # table.cell(7, the_column + index).value = Svc_train_acc
-            # table.cell(8, the_column + index).value = Dnn_train_acc
-            # table.cell(9, the_column + index).value = CNN_train_acc
-
-            # 将测试集写入到excel中
-            write_to_excel(start_index=11, table=table, current_column=1,
-                           content=["测试集", "测试集", "测试集", "测试集", "测试集"])
-            write_to_excel(start_index=11, table=table, current_column=the_column + index,
-                           content=[Rfc_acc, Gbc_acc, Svc_acc, Dnn_acc, CNN_acc])
-            # table.cell(11, the_column + index).value = Rfc_acc
-            # table.cell(12, the_column + index).value = Gbc_acc
-            # table.cell(13, the_column + index).value = Svc_acc
-            # table.cell(14, the_column + index).value = Dnn_acc
-            # table.cell(15, the_column + index).value = CNN_acc
-
-            # 将预测数据写入到excel中
-            write_to_excel(start_index=17, table=table, current_column=1,
-                           content=["验证集", "验证集", "验证集", "验证集", "验证集"])
-            write_to_excel(start_index=17, table=table, current_column=the_column + index,
-                           content=[verify_y1, verify_y2, verify_y3, verify_y6, verify_y7])
-            # table.cell(17, the_column + index).value = verify_y1
-            # table.cell(18, the_column + index).value = verify_y2
-            # table.cell(19, the_column + index).value = verify_y3
-            # table.cell(20, the_column + index).value = verify_y6
-            # table.cell(21, the_column + index).value = verify_y7
-
-            # 保存excel文件
-            data.save(filename)
+                data.save(filename)
     print("运行结束！")
